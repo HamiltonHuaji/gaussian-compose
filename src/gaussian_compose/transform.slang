@@ -204,23 +204,25 @@ void indexed_transform_wxyz_bwd_kernel(
     //     }
     // }
 
-    // if (WaveActiveAllEqual(n)) {
-    //     // all n are the same
-    //     var trans_grad_sum = WaveActiveSum(dp_trans.d);
-    //     var rotors_grad_sum = WaveActiveSum(dp_rotor.d);
-    //     if (WaveIsFirstLane()) {
-    //         float3 trans_ignored;
-    //         float4 rotors_ignored;
-    //         trans_grad.InterlockedAdd(n, trans_grad_sum, trans_ignored);
-    //         rotors_grad.InterlockedAdd(n, rotors_grad_sum, rotors_ignored);
-    //     }
-    // } else {
-    // naive implementation
-    float3 trans_ignored;
-    float4 rotors_ignored;
-    trans_grad.InterlockedAdd(n, dp_trans.d, trans_ignored);
-    rotors_grad.InterlockedAdd(n, dp_rotor.d, rotors_ignored);
-    // }
+    GroupMemoryBarrierWithWaveSync();
+
+    if (WaveActiveAllEqual(n)) {
+        // all n are the same
+        var trans_grad_sum = WaveActiveSum(dp_trans.d);
+        var rotors_grad_sum = WaveActiveSum(dp_rotor.d);
+        if (WaveIsFirstLane()) {
+            float3 trans_ignored;
+            float4 rotors_ignored;
+            trans_grad.InterlockedAdd(n, trans_grad_sum, trans_ignored);
+            rotors_grad.InterlockedAdd(n, rotors_grad_sum, rotors_ignored);
+        }
+    } else {
+        // naive implementation
+        float3 trans_ignored;
+        float4 rotors_ignored;
+        trans_grad.InterlockedAdd(n, dp_trans.d, trans_ignored);
+        rotors_grad.InterlockedAdd(n, dp_rotor.d, rotors_ignored);
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////////
